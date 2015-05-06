@@ -9,7 +9,7 @@ from TrainTrackerConfigParser import TrainTrackerConfigParser
 
 def init_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-config', default='Z:/Git/cta-train-tracker/resources/train_tracker.conf', help='The path to the config file.')
+    parser.add_argument('-config', help='The path to the config file.')
     return parser.parse_args()
 
 
