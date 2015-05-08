@@ -3,7 +3,6 @@ import argparse
 import datetime
 
 from CTAInterface import CTAInterface
-from StationDataAccessor import StationDataAccessor
 from TrainTrackerConfigParser import TrainTrackerConfigParser
 
 
@@ -14,7 +13,6 @@ def init_parser():
 
 
 def print_schedule(schedule):
-    current_time = datetime.datetime.now()
     for station, station_value in schedule.iteritems():
         print '\nStation: {0}'.format(station)
         for line, line_value in station_value.iteritems():
@@ -22,10 +20,8 @@ def print_schedule(schedule):
             for direction, arrival_times in line_value.iteritems():
                 print '\t\tDirection: {0}'.format(direction)
                 for arrival_time in arrival_times:
-                    parsed_time = time.strptime(arrival_time, '%Y%m%d %H:%M:%S')
-                    time_difference = datetime.datetime(*parsed_time[:6]) - current_time
-                    wait = divmod(time_difference.days * 86400 + time_difference.seconds, 60)
-                    print '\t\t\tETA: {0} min {1} sec'.format(wait[0], wait[1])
+                    wait_time = calculate_wait_time(arrival_time)
+                    print '\t\t\tETA: {0} min {1} sec'.format(wait_time[0], wait_time[1])
 
 
 def aggregate_results(results):
@@ -43,9 +39,17 @@ def aggregate_results(results):
     return aggregate
 
 
-def run(config, data_accessor, cta_interface):
+def calculate_wait_time(next_arrival_time):
+    current_time = datetime.datetime.now()
+    time_format_arrival = time.strptime(next_arrival_time, '%Y%m%d %H:%M:%S')
+    time_difference = datetime.datetime(*time_format_arrival[:6]) - current_time
+    wait_time = divmod(time_difference.days * 86400 + time_difference.seconds, 60)
+    return wait_time
+
+
+def run(config, cta_interface):
     while True:
-        results = cta_interface.ping_many(config.stations_to_track)
+        results = cta_interface.get_next_arrivals(config.stations_to_track)
         aggregate = aggregate_results(results)
         print_schedule(aggregate)
         time.sleep(float(config.refresh_rate))
@@ -56,6 +60,5 @@ if __name__ == '__main__':
     config = TrainTrackerConfigParser(args.config)
 
     cta_interface = CTAInterface(config.api_key)
-    data_accessor = StationDataAccessor()
 
-    run(config, data_accessor, cta_interface)
+    run(config, cta_interface)
